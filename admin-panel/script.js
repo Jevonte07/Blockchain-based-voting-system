@@ -1,4 +1,4 @@
-const URL = "http://127.0.0.1:5000";
+const URL = "https://blockchain-based-voting-system-u0pb.onrender.com";
 
 // LOGIN
 function login() {
