@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voting Admin Panel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="center">
+
+    <div class="box login-box">
+        <h1>🗳 Admin Login</h1>
+        <p>Secure Blockchain Election Control</p>
+
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+
+        <button onclick="login()">Login</button>
+
+        <p id="loginMsg"></p>
+    </div>
+
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+<header class="topbar">
+    <h1>🗳 Voting Admin Dashboard</h1>
+    <button onclick="logout()">Logout</button>
+</header>
+
+<section class="stats">
+
+    <div class="stat-card">
+        <h3>Status</h3>
+        <p id="status">Not Started</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Countdown</h3>
+        <p id="timer">00:00:00</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Security</h3>
+        <p>Blockchain Active ✅</p>
+    </div>
+
+</section>
+
+<div class="container">
+
+    <!-- Candidate -->
+    <div class="box">
+        <h2>👤 Candidates</h2>
+
+        <input type="text" id="candidateName" placeholder="Candidate Name">
+        <button onclick="addCandidate()">Add Candidate</button>
+
+        <ul id="candidateList"></ul>
+    </div>
+
+    <!-- Time -->
+    <div class="box">
+        <h2>⏰ Voting Time</h2>
+
+        <label>Start Time</label>
+        <input type="datetime-local" id="startTime">
+
+        <label>End Time</label>
+        <input type="datetime-local" id="endTime">
+
+        <button onclick="saveTime()">Save Time</button>
+    </div>
+
+    <!-- Results -->
+    <div class="box">
+        <h2>📊 Live Results</h2>
+
+        <button onclick="loadResults()">Refresh Results</button>
+
+        <div id="results"></div>
+    </div>
+
+</div>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
