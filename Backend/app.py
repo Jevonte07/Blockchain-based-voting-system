@@ -331,8 +331,13 @@ def vote():
 
         now = datetime.utcnow()
 
-        start = datetime.fromisoformat(start_time)
-        end = datetime.fromisoformat(end_time)
+        start = datetime.fromisoformat(
+            start_time.replace("Z","")
+        )
+        
+        end = datetime.fromisoformat(
+            end_time.replace("Z","")
+        )
 
         if now < start:
             return jsonify({"msg": "Voting not started"})
