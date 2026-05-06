@@ -329,7 +329,7 @@ def vote():
         if start_time == "" or end_time == "":
             return jsonify({"msg": "Voting time not set"})
 
-        now = datetime.now()
+        now = datetime.utcnow()
 
         start = datetime.fromisoformat(start_time)
         end = datetime.fromisoformat(end_time)
