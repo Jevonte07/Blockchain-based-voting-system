@@ -24,14 +24,18 @@ bc = Blockchain()
 # DATABASE
 # -------------------------------------------------
 def db():
+
     conn = sqlite3.connect(DB)
+
     conn.row_factory = sqlite3.Row
+
     return conn
 
 
 def init_db():
 
     conn = db()
+
     cur = conn.cursor()
 
     # Candidates
@@ -70,8 +74,11 @@ def init_db():
 
     conn.commit()
 
-    # Default admin
-    cur.execute("SELECT * FROM admins WHERE username='admin'")
+    # Default Admin
+    cur.execute(
+        "SELECT * FROM admins WHERE username='admin'"
+    )
+
     row = cur.fetchone()
 
     if row is None:
@@ -81,7 +88,10 @@ def init_db():
         ).hexdigest()
 
         cur.execute(
-            "INSERT INTO admins(username,password) VALUES(?,?)",
+            """
+            INSERT INTO admins(username,password)
+            VALUES(?,?)
+            """,
             ("admin", password_hash)
         )
 
@@ -93,11 +103,12 @@ def init_db():
 init_db()
 
 # -------------------------------------------------
-# HELPERS
+# SETTINGS HELPERS
 # -------------------------------------------------
 def get_setting(key):
 
     conn = db()
+
     cur = conn.cursor()
 
     cur.execute(
@@ -118,6 +129,7 @@ def get_setting(key):
 def set_setting(key, value):
 
     conn = db()
+
     cur = conn.cursor()
 
     cur.execute("""
@@ -128,9 +140,13 @@ def set_setting(key, value):
     """, (key, value))
 
     conn.commit()
+
     conn.close()
 
 
+# -------------------------------------------------
+# SPAM PROTECTION
+# -------------------------------------------------
 last_vote_time = {}
 
 # -------------------------------------------------
@@ -138,6 +154,7 @@ last_vote_time = {}
 # -------------------------------------------------
 @app.route('/')
 def home():
+
     return send_from_directory(
         "../admin-panel",
         "index.html"
@@ -146,6 +163,7 @@ def home():
 
 @app.route('/<path:path>')
 def files(path):
+
     return send_from_directory(
         "../admin-panel",
         path
@@ -180,11 +198,13 @@ def login():
         ).hexdigest()
 
         conn = db()
+
         cur = conn.cursor()
 
         cur.execute(
             """
-            SELECT * FROM admins
+            SELECT *
+            FROM admins
             WHERE username=? AND password=?
             """,
             (user, password_hash)
@@ -220,11 +240,13 @@ def add_candidate():
         ).strip()
 
         if name == "":
+
             return jsonify({
                 "msg": "Enter candidate name"
             })
 
         conn = db()
+
         cur = conn.cursor()
 
         try:
@@ -264,15 +286,14 @@ def add_candidate():
 def candidates():
 
     conn = db()
+
     cur = conn.cursor()
 
-    cur.execute(
-        """
-        SELECT name
-        FROM candidates
-        ORDER BY id
-        """
-    )
+    cur.execute("""
+    SELECT name
+    FROM candidates
+    ORDER BY id
+    """)
 
     rows = cur.fetchall()
 
@@ -289,6 +310,7 @@ def candidates():
 def delete_candidate(name):
 
     conn = db()
+
     cur = conn.cursor()
 
     cur.execute(
@@ -297,6 +319,7 @@ def delete_candidate(name):
     )
 
     conn.commit()
+
     conn.close()
 
     return jsonify({"msg": "deleted"})
@@ -315,6 +338,7 @@ def set_time():
         end = data.get("end", "")
 
         set_setting("start_time", start)
+
         set_setting("end_time", end)
 
         return jsonify({"msg": "saved"})
@@ -361,47 +385,59 @@ def vote():
 
         # Empty voter
         if voter == "":
+
             return jsonify({
                 "msg": "Enter Voter ID"
             })
 
         # Fingerprint check
         if biometric != True:
+
             return jsonify({
                 "msg": "Fingerprint required"
             })
 
         # Voting time
         start_time = get_setting("start_time")
+
         end_time = get_setting("end_time")
 
         if start_time == "" or end_time == "":
+
             return jsonify({
                 "msg": "Voting time not set"
             })
 
-        # FIXED TIMEZONE ISSUE
-        now = datetime.now()
+        # -------------------------------------------------
+        # FINAL TIMEZONE FIX
+        # -------------------------------------------------
+        now = datetime.utcnow()
 
         start = datetime.fromisoformat(
-            start_time
+            start_time.replace("Z", "")
         )
 
         end = datetime.fromisoformat(
-            end_time
+            end_time.replace("Z", "")
         )
 
+        # Before voting
         if now < start:
+
             return jsonify({
                 "msg": "Voting not started"
             })
 
+        # After voting
         if now > end:
+
             return jsonify({
                 "msg": "Voting ended"
             })
 
-        # Spam protection
+        # -------------------------------------------------
+        # SPAM PROTECTION
+        # -------------------------------------------------
         current = time.time()
 
         if voter in last_vote_time:
@@ -415,9 +451,12 @@ def vote():
         last_vote_time[voter] = current
 
         conn = db()
+
         cur = conn.cursor()
 
-        # Candidate exists
+        # -------------------------------------------------
+        # CHECK CANDIDATE
+        # -------------------------------------------------
         cur.execute(
             """
             SELECT *
@@ -437,7 +476,9 @@ def vote():
                 "msg": "Invalid Candidate"
             })
 
-        # Already voted
+        # -------------------------------------------------
+        # DOUBLE VOTE BLOCK
+        # -------------------------------------------------
         cur.execute(
             """
             SELECT *
@@ -457,7 +498,9 @@ def vote():
                 "msg": "Already voted"
             })
 
-        # Blockchain validation
+        # -------------------------------------------------
+        # BLOCKCHAIN VALIDATION
+        # -------------------------------------------------
         if not bc.is_chain_valid():
 
             conn.close()
@@ -466,7 +509,9 @@ def vote():
                 "msg": "Blockchain Error"
             })
 
-        # Save vote
+        # -------------------------------------------------
+        # SAVE VOTE
+        # -------------------------------------------------
         cur.execute(
             """
             INSERT INTO votes(
@@ -479,14 +524,17 @@ def vote():
             (
                 voter,
                 candidate,
-                datetime.now().isoformat()
+                datetime.utcnow().isoformat()
             )
         )
 
         conn.commit()
+
         conn.close()
 
-        # Blockchain entry
+        # -------------------------------------------------
+        # BLOCKCHAIN ENTRY
+        # -------------------------------------------------
         bc.add_vote(voter, candidate)
 
         previous_block = bc.get_previous_block()
@@ -509,6 +557,109 @@ def vote():
             "msg": "Vote Failed"
         })
 
+# -------------------------------------------------
+# RESULTS
+# -------------------------------------------------
+@app.route('/results')
+def results():
+
+    conn = db()
+
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT candidate,
+    COUNT(*) as total
+    FROM votes
+    GROUP BY candidate
+    """)
+
+    rows = cur.fetchall()
+
+    conn.close()
+
+    data = {}
+
+    for row in rows:
+
+        data[row["candidate"]] = row["total"]
+
+    return jsonify(data)
+
+# -------------------------------------------------
+# WINNER
+# -------------------------------------------------
+@app.route('/winner')
+def winner():
+
+    conn = db()
+
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT candidate,
+    COUNT(*) as total
+    FROM votes
+    GROUP BY candidate
+    ORDER BY total DESC
+    LIMIT 1
+    """)
+
+    row = cur.fetchone()
+
+    conn.close()
+
+    if row:
+
+        return jsonify({
+            "winner": row["candidate"],
+            "votes": row["total"]
+        })
+
+    return jsonify({
+        "winner": "No Votes",
+        "votes": 0
+    })
+
+# -------------------------------------------------
+# BLOCKCHAIN VIEW
+# -------------------------------------------------
+@app.route('/chain')
+def chain():
+
+    return jsonify({
+        "length": len(bc.chain),
+        "chain": bc.chain
+    })
+
+# -------------------------------------------------
+# VALIDATE BLOCKCHAIN
+# -------------------------------------------------
+@app.route('/validate')
+def validate():
+
+    if bc.is_chain_valid():
+
+        return jsonify({
+            "msg": "Blockchain Valid"
+        })
+
+    else:
+
+        return jsonify({
+            "msg": "Blockchain Tampered"
+        })
+
+# -------------------------------------------------
+# RUN
+# -------------------------------------------------
+if __name__ == "__main__":
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
 # -------------------------------------------------
 # RESULTS
 # -------------------------------------------------
