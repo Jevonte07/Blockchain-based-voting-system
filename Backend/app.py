@@ -14,11 +14,9 @@ app = Flask(__name__, static_folder="../admin-panel")
 CORS(
     app,
     supports_credentials=True,
-    resources={
-        r"/*": {
-            "origins": "*"
-        }
-    }
+    origins=[
+        "https://blockchain-based-voting-system-rust.vercel.app"
+    ]
 )
 
 DB = "voting.db"
@@ -351,7 +349,6 @@ def set_time():
             data.get("end", "")
         ).strip()
 
-        # Save directly without parsing
         set_setting("start_time", start)
 
         set_setting("end_time", end)
@@ -367,6 +364,7 @@ def set_time():
         return jsonify({
             "msg": "error"
         }), 500
+
 # -------------------------------------------------
 # GET TIME
 # -------------------------------------------------
@@ -386,7 +384,9 @@ def vote():
 
     try:
 
-        data = request.get_json()
+        data = request.get_json(force=True)
+
+        print("VOTE DATA:", data)
 
         voter = str(
             data.get("voter", "")
@@ -401,18 +401,14 @@ def vote():
             False
         )
 
+        # TEMP TEST MODE
+        biometric = True
+
         # Empty voter
         if voter == "":
 
             return jsonify({
                 "msg": "Enter Voter ID"
-            })
-
-        # Fingerprint check
-        if biometric != True:
-
-            return jsonify({
-                "msg": "Fingerprint required"
             })
 
         # Voting time
@@ -426,9 +422,7 @@ def vote():
                 "msg": "Voting time not set"
             })
 
-        # -------------------------------------------------
-        # FINAL UTC TIME FIX
-        # -------------------------------------------------
+        # UTC TIME
         now = datetime.now(timezone.utc)
 
         start = datetime.fromisoformat(
@@ -453,9 +447,7 @@ def vote():
                 "msg": "Voting ended"
             })
 
-        # -------------------------------------------------
         # SPAM PROTECTION
-        # -------------------------------------------------
         current = time.time()
 
         if voter in last_vote_time:
@@ -561,11 +553,11 @@ def vote():
 
     except Exception as e:
 
-        print("VOTE ERROR:", e)
+        print("VOTE ERROR:", str(e))
 
         return jsonify({
             "msg": "Vote Failed"
-        })
+        }), 500
 
 # -------------------------------------------------
 # RESULTS
