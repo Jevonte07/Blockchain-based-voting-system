@@ -76,7 +76,9 @@ def init_db():
 
     if row is None:
 
-        password_hash = hashlib.sha256("1234".encode()).hexdigest()
+        password_hash = hashlib.sha256(
+            "1234".encode()
+        ).hexdigest()
 
         cur.execute(
             "INSERT INTO admins(username,password) VALUES(?,?)",
@@ -136,12 +138,18 @@ last_vote_time = {}
 # -------------------------------------------------
 @app.route('/')
 def home():
-    return send_from_directory("../admin-panel", "index.html")
+    return send_from_directory(
+        "../admin-panel",
+        "index.html"
+    )
 
 
 @app.route('/<path:path>')
 def files(path):
-    return send_from_directory("../admin-panel", path)
+    return send_from_directory(
+        "../admin-panel",
+        path
+    )
 
 # -------------------------------------------------
 # LOGIN
@@ -151,21 +159,34 @@ def login():
 
     try:
 
-        data = request.get_json(force=True, silent=True)
+        data = request.get_json(
+            force=True,
+            silent=True
+        )
 
         if not data:
             return jsonify({"msg": "fail"})
 
-        user = str(data.get("user", "")).strip()
-        password = str(data.get("pass", "")).strip()
+        user = str(
+            data.get("user", "")
+        ).strip()
 
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        password = str(
+            data.get("pass", "")
+        ).strip()
+
+        password_hash = hashlib.sha256(
+            password.encode()
+        ).hexdigest()
 
         conn = db()
         cur = conn.cursor()
 
         cur.execute(
-            "SELECT * FROM admins WHERE username=? AND password=?",
+            """
+            SELECT * FROM admins
+            WHERE username=? AND password=?
+            """,
             (user, password_hash)
         )
 
@@ -194,10 +215,14 @@ def add_candidate():
 
         data = request.get_json()
 
-        name = str(data.get("name", "")).strip()
+        name = str(
+            data.get("name", "")
+        ).strip()
 
         if name == "":
-            return jsonify({"msg": "Enter candidate name"})
+            return jsonify({
+                "msg": "Enter candidate name"
+            })
 
         conn = db()
         cur = conn.cursor()
@@ -205,7 +230,10 @@ def add_candidate():
         try:
 
             cur.execute(
-                "INSERT INTO candidates(name) VALUES(?)",
+                """
+                INSERT INTO candidates(name)
+                VALUES(?)
+                """,
                 (name,)
             )
 
@@ -215,7 +243,9 @@ def add_candidate():
 
             conn.close()
 
-            return jsonify({"msg": "Candidate exists"})
+            return jsonify({
+                "msg": "Candidate exists"
+            })
 
         conn.close()
 
@@ -237,14 +267,20 @@ def candidates():
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT name FROM candidates ORDER BY id"
+        """
+        SELECT name
+        FROM candidates
+        ORDER BY id
+        """
     )
 
     rows = cur.fetchall()
 
     conn.close()
 
-    return jsonify([r["name"] for r in rows])
+    return jsonify([
+        r["name"] for r in rows
+    ])
 
 # -------------------------------------------------
 # DELETE CANDIDATE
@@ -310,40 +346,60 @@ def vote():
 
         data = request.get_json()
 
-        voter = str(data.get("voter", "")).strip().lower()
-        candidate = str(data.get("candidate", "")).strip()
-        biometric = data.get("biometric", False)
+        voter = str(
+            data.get("voter", "")
+        ).strip().lower()
+
+        candidate = str(
+            data.get("candidate", "")
+        ).strip()
+
+        biometric = data.get(
+            "biometric",
+            False
+        )
 
         # Empty voter
         if voter == "":
-            return jsonify({"msg": "Enter Voter ID"})
+            return jsonify({
+                "msg": "Enter Voter ID"
+            })
 
         # Fingerprint check
         if biometric != True:
-            return jsonify({"msg": "Fingerprint required"})
+            return jsonify({
+                "msg": "Fingerprint required"
+            })
 
         # Voting time
         start_time = get_setting("start_time")
         end_time = get_setting("end_time")
 
         if start_time == "" or end_time == "":
-            return jsonify({"msg": "Voting time not set"})
+            return jsonify({
+                "msg": "Voting time not set"
+            })
 
-        now = datetime.utcnow()
+        # FIXED TIMEZONE ISSUE
+        now = datetime.now()
 
         start = datetime.fromisoformat(
-            start_time.replace("Z","")
+            start_time
         )
-        
+
         end = datetime.fromisoformat(
-            end_time.replace("Z","")
+            end_time
         )
 
         if now < start:
-            return jsonify({"msg": "Voting not started"})
+            return jsonify({
+                "msg": "Voting not started"
+            })
 
         if now > end:
-            return jsonify({"msg": "Voting ended"})
+            return jsonify({
+                "msg": "Voting ended"
+            })
 
         # Spam protection
         current = time.time()
@@ -351,7 +407,10 @@ def vote():
         if voter in last_vote_time:
 
             if current - last_vote_time[voter] < 3:
-                return jsonify({"msg": "Wait and retry"})
+
+                return jsonify({
+                    "msg": "Wait and retry"
+                })
 
         last_vote_time[voter] = current
 
@@ -360,7 +419,11 @@ def vote():
 
         # Candidate exists
         cur.execute(
-            "SELECT * FROM candidates WHERE name=?",
+            """
+            SELECT *
+            FROM candidates
+            WHERE name=?
+            """,
             (candidate,)
         )
 
@@ -370,11 +433,17 @@ def vote():
 
             conn.close()
 
-            return jsonify({"msg": "Invalid Candidate"})
+            return jsonify({
+                "msg": "Invalid Candidate"
+            })
 
         # Already voted
         cur.execute(
-            "SELECT * FROM votes WHERE voter=?",
+            """
+            SELECT *
+            FROM votes
+            WHERE voter=?
+            """,
             (voter,)
         )
 
@@ -384,18 +453,29 @@ def vote():
 
             conn.close()
 
-            return jsonify({"msg": "Already voted"})
+            return jsonify({
+                "msg": "Already voted"
+            })
 
         # Blockchain validation
         if not bc.is_chain_valid():
 
             conn.close()
 
-            return jsonify({"msg": "Blockchain Error"})
+            return jsonify({
+                "msg": "Blockchain Error"
+            })
 
         # Save vote
         cur.execute(
-            "INSERT INTO votes(voter,candidate,voted_at) VALUES(?,?,?)",
+            """
+            INSERT INTO votes(
+                voter,
+                candidate,
+                voted_at
+            )
+            VALUES(?,?,?)
+            """,
             (
                 voter,
                 candidate,
@@ -411,17 +491,23 @@ def vote():
 
         previous_block = bc.get_previous_block()
 
-        previous_hash = bc.hash(previous_block)
+        previous_hash = bc.hash(
+            previous_block
+        )
 
         bc.create_block(previous_hash)
 
-        return jsonify({"msg": "Vote Success"})
+        return jsonify({
+            "msg": "Vote Success"
+        })
 
     except Exception as e:
 
         print("VOTE ERROR:", e)
 
-        return jsonify({"msg": "Vote Failed"})
+        return jsonify({
+            "msg": "Vote Failed"
+        })
 
 # -------------------------------------------------
 # RESULTS
@@ -433,7 +519,8 @@ def results():
     cur = conn.cursor()
 
     cur.execute("""
-    SELECT candidate, COUNT(*) as total
+    SELECT candidate,
+    COUNT(*) as total
     FROM votes
     GROUP BY candidate
     """)
@@ -459,7 +546,8 @@ def winner():
     cur = conn.cursor()
 
     cur.execute("""
-    SELECT candidate, COUNT(*) as total
+    SELECT candidate,
+    COUNT(*) as total
     FROM votes
     GROUP BY candidate
     ORDER BY total DESC
@@ -500,12 +588,24 @@ def chain():
 def validate():
 
     if bc.is_chain_valid():
-        return jsonify({"msg": "Blockchain Valid"})
+
+        return jsonify({
+            "msg": "Blockchain Valid"
+        })
+
     else:
-        return jsonify({"msg": "Blockchain Tampered"})
+
+        return jsonify({
+            "msg": "Blockchain Tampered"
+        })
 
 # -------------------------------------------------
 # RUN
 # -------------------------------------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
