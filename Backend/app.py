@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from blockchain import Blockchain
-from datetime import datetime
+from datetime import datetime, timezone
 import sqlite3
 import hashlib
 import time
@@ -333,20 +333,38 @@ def set_time():
 
         data = request.get_json()
 
-        start = data.get("start", "")
-        end = data.get("end", "")
+        start = str(
+            data.get("start", "")
+        ).strip()
+
+        end = str(
+            data.get("end", "")
+        ).strip()
+
+        # Validate datetime format
+        datetime.fromisoformat(
+            start.replace("Z", "+00:00")
+        )
+
+        datetime.fromisoformat(
+            end.replace("Z", "+00:00")
+        )
 
         set_setting("start_time", start)
 
         set_setting("end_time", end)
 
-        return jsonify({"msg": "saved"})
+        return jsonify({
+            "msg": "saved"
+        })
 
     except Exception as e:
 
-        print("TIME ERROR:", e)
+        print("SET TIME ERROR:", e)
 
-        return jsonify({"msg": "error"})
+        return jsonify({
+            "msg": "error"
+        }), 500
 
 # -------------------------------------------------
 # GET TIME
@@ -407,15 +425,17 @@ def vote():
                 "msg": "Voting time not set"
             })
 
-        # TIME FIX
-        now = datetime.now()
+        # -------------------------------------------------
+        # FINAL UTC TIME FIX
+        # -------------------------------------------------
+        now = datetime.now(timezone.utc)
 
         start = datetime.fromisoformat(
-            start_time.replace("Z", "")
+            start_time.replace("Z", "+00:00")
         )
 
         end = datetime.fromisoformat(
-            end_time.replace("Z", "")
+            end_time.replace("Z", "+00:00")
         )
 
         # Before start
@@ -432,7 +452,9 @@ def vote():
                 "msg": "Voting ended"
             })
 
-        # Spam protection
+        # -------------------------------------------------
+        # SPAM PROTECTION
+        # -------------------------------------------------
         current = time.time()
 
         if voter in last_vote_time:
@@ -511,7 +533,9 @@ def vote():
             (
                 voter,
                 candidate,
-                datetime.now().isoformat()
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
             )
         )
 
