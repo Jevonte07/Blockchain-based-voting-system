@@ -11,7 +11,15 @@ import time
 # -------------------------------------------------
 app = Flask(__name__, static_folder="../admin-panel")
 
-CORS(app)
+CORS(
+    app,
+    supports_credentials=True,
+    resources={
+        r"/*": {
+            "origins": "*"
+        }
+    }
+)
 
 DB = "voting.db"
 
