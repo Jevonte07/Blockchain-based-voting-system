@@ -127,7 +127,7 @@ alert("Select both start and end time");
 return;
 }
 
-// ✅ Convert local browser time to UTC ISO
+// ✅ Convert to UTC ISO format
 let startUTC =
 new Date(startInput).toISOString();
 
