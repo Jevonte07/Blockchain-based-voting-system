@@ -114,19 +114,49 @@ credentials: "include"
 // SAVE TIME
 function saveTime() {
 
+let startInput =
+document.getElementById("startTime").value;
+
+let endInput =
+document.getElementById("endTime").value;
+
+if(startInput === "" || endInput === ""){
+
+alert("Select both start and end time");
+
+return;
+}
+
+// ✅ Convert local browser time to UTC ISO
+let startUTC =
+new Date(startInput).toISOString();
+
+let endUTC =
+new Date(endInput).toISOString();
+
 fetch(URL + "/set_time", {
-method: "POST",
-credentials: "include",
-headers: {
-"Content-Type": "application/json"
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
 },
-body: JSON.stringify({
-start: document.getElementById("startTime").value,
-end: document.getElementById("endTime").value
+
+body:JSON.stringify({
+
+start:startUTC,
+
+end:endUTC
+
 })
+
 })
-.then(res => res.json())
-.then(data => alert(data.msg));
+.then(res=>res.json())
+.then(data=>{
+
+alert(data.msg);
+
+});
 
 }
 
