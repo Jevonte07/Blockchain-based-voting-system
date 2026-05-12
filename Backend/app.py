@@ -331,7 +331,9 @@ def set_time():
 
     try:
 
-        data = request.get_json()
+        data = request.get_json(force=True)
+
+        print("RECEIVED:", data)
 
         start = str(
             data.get("start", "")
@@ -341,7 +343,7 @@ def set_time():
             data.get("end", "")
         ).strip()
 
-        # Store directly
+        # Save directly without parsing
         set_setting("start_time", start)
 
         set_setting("end_time", end)
@@ -352,7 +354,7 @@ def set_time():
 
     except Exception as e:
 
-        print("SET TIME ERROR:", e)
+        print("SET TIME ERROR:", str(e))
 
         return jsonify({
             "msg": "error"
