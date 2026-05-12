@@ -341,15 +341,7 @@ def set_time():
             data.get("end", "")
         ).strip()
 
-        # Validate datetime format
-        datetime.fromisoformat(
-            start.replace("Z", "+00:00")
-        )
-
-        datetime.fromisoformat(
-            end.replace("Z", "+00:00")
-        )
-
+        # Store directly
         set_setting("start_time", start)
 
         set_setting("end_time", end)
@@ -365,7 +357,6 @@ def set_time():
         return jsonify({
             "msg": "error"
         }), 500
-
 # -------------------------------------------------
 # GET TIME
 # -------------------------------------------------
