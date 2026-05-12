@@ -74,7 +74,7 @@ def init_db():
 
     conn.commit()
 
-    # Default Admin
+    # Default admin
     cur.execute(
         "SELECT * FROM admins WHERE username='admin'"
     )
@@ -142,7 +142,6 @@ def set_setting(key, value):
     conn.commit()
 
     conn.close()
-
 
 # -------------------------------------------------
 # SPAM PROTECTION
@@ -408,10 +407,8 @@ def vote():
                 "msg": "Voting time not set"
             })
 
-        # -------------------------------------------------
-        # FINAL TIMEZONE FIX
-        # -------------------------------------------------
-        now = datetime.utcnow()
+        # TIME FIX
+        now = datetime.now()
 
         start = datetime.fromisoformat(
             start_time.replace("Z", "")
@@ -421,23 +418,21 @@ def vote():
             end_time.replace("Z", "")
         )
 
-        # Before voting
+        # Before start
         if now < start:
 
             return jsonify({
                 "msg": "Voting not started"
             })
 
-        # After voting
+        # After end
         if now > end:
 
             return jsonify({
                 "msg": "Voting ended"
             })
 
-        # -------------------------------------------------
-        # SPAM PROTECTION
-        # -------------------------------------------------
+        # Spam protection
         current = time.time()
 
         if voter in last_vote_time:
@@ -454,9 +449,7 @@ def vote():
 
         cur = conn.cursor()
 
-        # -------------------------------------------------
-        # CHECK CANDIDATE
-        # -------------------------------------------------
+        # Candidate exists
         cur.execute(
             """
             SELECT *
@@ -476,9 +469,7 @@ def vote():
                 "msg": "Invalid Candidate"
             })
 
-        # -------------------------------------------------
-        # DOUBLE VOTE BLOCK
-        # -------------------------------------------------
+        # Already voted
         cur.execute(
             """
             SELECT *
@@ -498,9 +489,7 @@ def vote():
                 "msg": "Already voted"
             })
 
-        # -------------------------------------------------
-        # BLOCKCHAIN VALIDATION
-        # -------------------------------------------------
+        # Blockchain validation
         if not bc.is_chain_valid():
 
             conn.close()
@@ -509,9 +498,7 @@ def vote():
                 "msg": "Blockchain Error"
             })
 
-        # -------------------------------------------------
-        # SAVE VOTE
-        # -------------------------------------------------
+        # Save vote
         cur.execute(
             """
             INSERT INTO votes(
@@ -524,7 +511,7 @@ def vote():
             (
                 voter,
                 candidate,
-                datetime.utcnow().isoformat()
+                datetime.now().isoformat()
             )
         )
 
@@ -532,9 +519,7 @@ def vote():
 
         conn.close()
 
-        # -------------------------------------------------
-        # BLOCKCHAIN ENTRY
-        # -------------------------------------------------
+        # Blockchain entry
         bc.add_vote(voter, candidate)
 
         previous_block = bc.get_previous_block()
@@ -657,106 +642,5 @@ if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=5000,
-        debug=True
-    )
-# -------------------------------------------------
-# RESULTS
-# -------------------------------------------------
-@app.route('/results')
-def results():
-
-    conn = db()
-    cur = conn.cursor()
-
-    cur.execute("""
-    SELECT candidate,
-    COUNT(*) as total
-    FROM votes
-    GROUP BY candidate
-    """)
-
-    rows = cur.fetchall()
-
-    conn.close()
-
-    data = {}
-
-    for row in rows:
-        data[row["candidate"]] = row["total"]
-
-    return jsonify(data)
-
-# -------------------------------------------------
-# WINNER
-# -------------------------------------------------
-@app.route('/winner')
-def winner():
-
-    conn = db()
-    cur = conn.cursor()
-
-    cur.execute("""
-    SELECT candidate,
-    COUNT(*) as total
-    FROM votes
-    GROUP BY candidate
-    ORDER BY total DESC
-    LIMIT 1
-    """)
-
-    row = cur.fetchone()
-
-    conn.close()
-
-    if row:
-
-        return jsonify({
-            "winner": row["candidate"],
-            "votes": row["total"]
-        })
-
-    return jsonify({
-        "winner": "No Votes",
-        "votes": 0
-    })
-
-# -------------------------------------------------
-# BLOCKCHAIN
-# -------------------------------------------------
-@app.route('/chain')
-def chain():
-
-    return jsonify({
-        "length": len(bc.chain),
-        "chain": bc.chain
-    })
-
-# -------------------------------------------------
-# VALIDATE BLOCKCHAIN
-# -------------------------------------------------
-@app.route('/validate')
-def validate():
-
-    if bc.is_chain_valid():
-
-        return jsonify({
-            "msg": "Blockchain Valid"
-        })
-
-    else:
-
-        return jsonify({
-            "msg": "Blockchain Tampered"
-        })
-
-# -------------------------------------------------
-# RUN
-# -------------------------------------------------
-if __name__ == "__main__":
-
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=True
+        port=5000
     )
